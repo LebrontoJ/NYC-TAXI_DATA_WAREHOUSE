@@ -1,0 +1,63 @@
+version: 2
+
+models:
+  - name: dim_zones
+    description: Taxi zone dimension enriched with airport flags.
+    columns:
+      - name: location_id
+        tests:
+          - unique
+          - not_null
+      - name: borough
+        tests:
+          - accepted_values:
+              values: ['Bronx', 'Brooklyn', 'EWR', 'Manhattan', 'Queens', 'Staten Island', 'Unknown', 'N/A']
+
+  - name: fct_taxi_trips
+    description: Trip-level fact table with zone attributes and revenue metrics.
+    columns:
+      - name: trip_id
+        tests:
+          - unique
+          - not_null
+      - name: pickup_date
+        tests:
+          - not_null
+      - name: total_amount
+        tests:
+          - not_null
+      - name: pickup_location_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_zones')
+              field: location_id
+      - name: dropoff_location_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_zones')
+              field: location_id
+
+  - name: mart_daily_revenue
+    description: Daily revenue, demand, and trip efficiency metrics by pickup borough.
+    columns:
+      - name: pickup_date
+        tests:
+          - not_null
+      - name: trip_count
+        tests:
+          - not_null
+
+  - name: agg_hourly_zone_demand
+    description: Hourly pickup-zone demand table for dashboarding and demand analysis.
+    columns:
+      - name: pickup_hour
+        tests:
+          - not_null
+      - name: pickup_location_id
+        tests:
+          - not_null
+      - name: trip_count
+        tests:
+          - not_null

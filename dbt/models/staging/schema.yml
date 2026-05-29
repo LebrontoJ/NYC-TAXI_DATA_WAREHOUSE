@@ -1,0 +1,40 @@
+version: 2
+
+models:
+  - name: stg_yellow_taxi_trips
+    description: Cleaned and typed yellow taxi trips from the raw Snowflake VARIANT table.
+    columns:
+      - name: trip_id
+        tests:
+          - not_null
+      - name: pickup_at
+        tests:
+          - not_null
+      - name: dropoff_at
+        tests:
+          - not_null
+      - name: pickup_location_id
+        tests:
+          - not_null
+      - name: dropoff_location_id
+        tests:
+          - not_null
+      - name: payment_type
+        tests:
+          - accepted_values:
+              values: [0, 1, 2, 3, 4, 5, 6]
+              quote: false
+
+  - name: stg_taxi_zones
+    description: NYC TLC taxi zone lookup table.
+    columns:
+      - name: location_id
+        tests:
+          - unique
+          - not_null
+      - name: borough
+        tests:
+          - not_null
+      - name: zone
+        tests:
+          - not_null

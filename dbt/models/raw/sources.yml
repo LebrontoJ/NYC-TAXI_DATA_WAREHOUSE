@@ -1,0 +1,18 @@
+version: 2
+
+sources:
+  - name: raw
+    database: NYC_TAXI_DW
+    schema: RAW
+    tables:
+      - name: YELLOW_TAXI_TRIPS
+        description: Raw NYC TLC yellow taxi parquet records loaded into Snowflake as VARIANT.
+        columns:
+          - name: src
+            description: Original parquet row as a Snowflake variant object.
+          - name: source_file
+            description: Name of the staged source file.
+          - name: source_row_number
+            description: Row number from the staged parquet file, captured from Snowflake metadata.
+          - name: loaded_at
+            description: Timestamp when the raw row was copied into Snowflake.

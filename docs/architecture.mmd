@@ -1,0 +1,9 @@
+flowchart LR
+    A["NYC TLC public parquet files"] --> B["Airflow DAG"]
+    B --> C["Snowflake internal stage"]
+    C --> D["RAW.YELLOW_TAXI_TRIPS"]
+    D --> E["dbt staging models"]
+    H["dbt seed: taxi_zone_lookup.csv"] --> E
+    E --> F["dbt mart models"]
+    F --> G["BI-ready revenue and demand analytics"]
+

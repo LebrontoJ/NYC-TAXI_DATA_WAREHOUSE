@@ -1,0 +1,29 @@
+name: nyc_taxi_warehouse
+version: 1.0.0
+config-version: 2
+
+profile: nyc_taxi_warehouse
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+models:
+  nyc_taxi_warehouse:
+    staging:
+      +materialized: view
+      +schema: transform
+    marts:
+      +materialized: table
+      +schema: marts
+
+seeds:
+  nyc_taxi_warehouse:
+    +schema: transform
+    +quote_columns: false
+
