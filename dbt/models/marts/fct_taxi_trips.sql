@@ -1,3 +1,12 @@
+{{
+    config(
+        materialized='incremental',
+        unique_key='trip_id',
+        incremental_strategy='merge',
+        on_schema_change='sync_all_columns'
+    )
+}}
+
 with trips as (
     select *
     from {{ ref('stg_yellow_taxi_trips') }}

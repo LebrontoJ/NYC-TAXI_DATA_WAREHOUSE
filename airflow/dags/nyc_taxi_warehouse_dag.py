@@ -106,6 +106,51 @@ def nyc_taxi_warehouse():
             """
         )
 
+    @task
+    def summarize_warehouse() -> None:
+        hook = SnowflakeHook(snowflake_conn_id="snowflake_default")
+        metrics = hook.get_records(
+            """
+            select 'raw_yellow_taxi_trips' as metric, count(*)::string as value
+            from NYC_TAXI_DW.RAW.YELLOW_TAXI_TRIPS
+            union all
+            select 'fct_taxi_trips', count(*)::string
+            from NYC_TAXI_DW.MARTS.FCT_TAXI_TRIPS
+            union all
+            select 'mart_daily_revenue', count(*)::string
+            from NYC_TAXI_DW.MARTS.MART_DAILY_REVENUE
+            union all
+            select 'agg_hourly_zone_demand', count(*)::string
+            from NYC_TAXI_DW.MARTS.AGG_HOURLY_ZONE_DEMAND
+            union all
+            select 'pickup_date_range', min(pickup_date)::string || ' to ' || max(pickup_date)::string
+            from NYC_TAXI_DW.MARTS.FCT_TAXI_TRIPS
+            union all
+            select 'gross_revenue', round(sum(total_amount), 2)::string
+            from NYC_TAXI_DW.MARTS.FCT_TAXI_TRIPS;
+            """
+        )
+        top_boroughs = hook.get_records(
+            """
+            select
+                pickup_borough,
+                count(*) as trip_count,
+                round(sum(total_amount), 2) as gross_revenue
+            from NYC_TAXI_DW.MARTS.FCT_TAXI_TRIPS
+            group by 1
+            order by trip_count desc
+            limit 5;
+            """
+        )
+
+        print("NYC Taxi warehouse summary")
+        for metric, value in metrics:
+            print(f"- {metric}: {value}")
+
+        print("Top pickup boroughs")
+        for borough, trip_count, gross_revenue in top_boroughs:
+            print(f"- {borough}: {trip_count} trips, ${gross_revenue} gross revenue")
+
     dbt_deps = BashOperator(
         task_id="dbt_deps",
         bash_command=f"cd {PROJECT_DIR} && {DBT_BIN} deps --profiles-dir .",
@@ -122,6 +167,7 @@ def nyc_taxi_warehouse():
         task_id="dbt_test",
         bash_command=f"cd {PROJECT_DIR} && {DBT_BIN} test --profiles-dir .",
     )
+    warehouse_summary = summarize_warehouse()
 
     snowflake_ready = ensure_snowflake_objects()
     downloaded = download_trip_files()
@@ -130,7 +176,7 @@ def nyc_taxi_warehouse():
 
     snowflake_ready >> downloaded >> loaded >> dbt_deps
     zone_lookup >> dbt_seed
-    dbt_deps >> dbt_seed >> dbt_run >> dbt_test
+    dbt_deps >> dbt_seed >> dbt_run >> dbt_test >> warehouse_summary
 
 
 nyc_taxi_warehouse()

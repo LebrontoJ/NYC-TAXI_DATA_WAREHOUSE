@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    env:
+      SNOWFLAKE_ACCOUNT: dummy_account
+      SNOWFLAKE_USER: dummy_user
+      SNOWFLAKE_PASSWORD: dummy_password
+      SNOWFLAKE_ROLE: ACCOUNTADMIN
+      SNOWFLAKE_WAREHOUSE: COMPUTE_WH
+      SNOWFLAKE_DATABASE: NYC_TAXI_DW
+      SNOWFLAKE_SCHEMA: TRANSFORM
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install validation dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install dbt-snowflake==1.8.3 pyyaml
+
+      - name: Validate Python syntax
+        run: |
+          python -m py_compile airflow/dags/nyc_taxi_warehouse_dag.py
+          python -m py_compile dashboard/app.py
+
+      - name: Validate YAML files
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import yaml
+
+          for path in list(Path(".").glob("*.yml")) + list(Path("dbt").rglob("*.yml")) + list(Path(".github").rglob("*.yml")):
+              with path.open() as handle:
+                  yaml.safe_load(handle)
+              print(f"parsed {path}")
+          PY
+
+      - name: dbt parse
+        run: dbt parse --project-dir dbt --profiles-dir dbt
+

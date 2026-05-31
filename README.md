@@ -14,6 +14,8 @@ The project answers practical business questions:
 - **Snowflake**: cloud warehouse, raw landing tables, internal stages
 - **dbt**: staging and mart transformations, tests, documentation
 - **Airflow**: orchestration for ingestion, loading, dbt run, and dbt test
+- **Streamlit**: Snowflake-backed analytics dashboard
+- **GitHub Actions**: CI checks for DAG syntax, YAML, and dbt parsing
 - **NYC TLC public data**: yellow taxi trip records and taxi zone lookup
 
 ## Architecture
@@ -63,6 +65,7 @@ docker compose up
 
 5. Open Airflow at `http://localhost:8080`.
 6. Trigger `nyc_taxi_warehouse`.
+7. After the DAG succeeds, open the dashboard at `http://localhost:8501`.
 
 Default Airflow credentials are `airflow` / `airflow`.
 
@@ -73,6 +76,7 @@ Default Airflow credentials are `airflow` / `airflow`.
 3. Uploads files to a Snowflake internal stage.
 4. Runs `COPY INTO` to load raw records.
 5. Runs `dbt deps`, `dbt seed`, `dbt run`, and `dbt test`.
+6. Prints a warehouse summary with row counts, revenue, date range, and top boroughs.
 
 ## dbt Models
 
@@ -88,12 +92,46 @@ Default Airflow credentials are `airflow` / `airflow`.
 - `mart_daily_revenue`: daily revenue and operational KPIs
 - `agg_hourly_zone_demand`: hourly pickup-zone demand table
 
+`fct_taxi_trips` is configured as a dbt incremental model using a Snowflake `merge` strategy and `trip_id` as the unique key. The raw load captures `METADATA$FILE_ROW_NUMBER`, so each source file row gets a stable warehouse key.
+
+## Dashboard
+
+The Streamlit dashboard reads from Snowflake mart tables and shows:
+
+- KPI cards for trips, revenue, average fare, average distance, and airport share
+- Daily revenue trend
+- Hourly demand heatmap
+- Airport trip share by hour
+- Top pickup zones
+
+Run it through Docker Compose:
+
+```bash
+docker compose up dashboard
+```
+
+Then open `http://localhost:8501`.
+
+## CI/CD
+
+GitHub Actions workflow: `.github/workflows/ci.yml`
+
+It validates:
+
+- Airflow DAG Python syntax
+- Dashboard Python syntax
+- YAML files
+- `dbt parse`
+
 ## Example Interview Talking Points
 
 - Designed a raw-to-mart Snowflake warehouse using ELT patterns.
 - Stored raw parquet rows as `VARIANT` to preserve source fidelity.
 - Used dbt tests for uniqueness, accepted values, relationships, and metric sanity checks.
 - Built Airflow orchestration with idempotent Snowflake setup and repeatable dbt runs.
+- Added Airflow observability with warehouse summary metrics after successful dbt tests.
+- Implemented dbt incremental modeling with Snowflake merge semantics.
+- Added CI checks and a Streamlit dashboard layer for portfolio demonstration.
 - Created BI-ready marts for demand, revenue, airport trips, tipping behavior, and utilization analysis.
 
 ## Suggested Extensions
